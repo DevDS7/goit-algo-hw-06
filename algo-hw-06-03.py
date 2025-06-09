@@ -1,15 +1,40 @@
-import networkx as nx
-import matplotlib.pyplot as plt
+import heapq
 
-G = nx.Graph()
+def dijkstra_manual(graph, start):
+    distances = {node: float('inf') for node in graph}
+    distances[start] = 0
+    previous_nodes = {node: None for node in graph}
+    queue = [(0, start)]
+
+    while queue:
+        current_distance, current_node = heapq.heappop(queue)
+
+        if current_distance > distances[current_node]:
+            continue
+
+        for neighbor, weight in graph[current_node]:
+            distance = current_distance + weight
+            if distance < distances[neighbor]:
+                distances[neighbor] = distance
+                previous_nodes[neighbor] = current_node
+                heapq.heappush(queue, (distance, neighbor))
+
+    return distances, previous_nodes
+
+def reconstruct_path(previous_nodes, start, target):
+    path = []
+    current_node = target
+    while current_node != start:
+        path.append(current_node)
+        current_node = previous_nodes[current_node]
+    path.append(start)
+    return path[::-1]
 
 stations = [
     "Вокзальна", "Майдан Незалежності", "Площа Українських Героїв",
     "Золоті Ворота", "Героїв Дніпра", "Хрещатик",
     "Житомирська", "Лук'янівська", "Палац Спорту"
 ]
-
-G.add_nodes_from(stations)
 
 edges = [
     ("Житомирська", "Вокзальна", {"weight": 5}),
@@ -22,22 +47,15 @@ edges = [
     ("Золоті Ворота", "Лук'янівська" , {"weight": 4})
 ]
 
-G.add_edges_from(edges)
+graph = {station: [] for station in stations} 
 
-pos = nx.spring_layout(G, seed=42)
-nx.draw(G, pos, with_labels=True, node_size=700, node_color="skyblue", font_size=15, width=2)
-labels = nx.get_edge_attributes(G, 'weight')
-nx.draw_networkx_edge_labels(G, pos, edge_labels=labels)
+for u, v, w in edges:
+    graph[u].append((v, w["weight"]))
+    graph[v].append((u, w["weight"]))
 
-plt.show()
+distances, previous = dijkstra_manual(graph, "Житомирська")
+shortest_path = reconstruct_path(previous, "Житомирська", "Лук'янівська")
+distances["Лук'янівська"], shortest_path
 
-#Обрахунок найкоротших шляхів
-for source in G.nodes:
-    lengths, paths = nx.single_source_dijkstra(G, source)
-    print(f"\n🔹 Найкоротші шляхи від '{source}':")
-    for target in G.nodes:
-        if source != target:
-            print(f"  до '{target}': відстань = {lengths[target]}, шлях = {' → '.join(paths[target])}")
-
-length, path = nx.single_source_dijkstra(G, source="Житомирська", target="Лук'янівська")
-print(f"\n🚆 Найкоротший шлях з Житомирської до Лук'янівської: {path} (відстань: {length})")
+print(f"Shortest distance from Житомирська to Лук'янівська: {distances['Лук\'янівська']}")
+print(f"Shortest path from Житомирська to Лук'янівська: {' -> '.join(shortest_path)}")
